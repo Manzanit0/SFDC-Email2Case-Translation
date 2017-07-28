@@ -12,20 +12,37 @@ public with sharing class GTranslationAPI {
     private static final String DETECTION_ENDPOINT = 'https://translation.googleapis.com/language/translate/v2/detect';
     private static final String TRANSLATION_ENDPOINT = 'https://translation.googleapis.com/language/translate/v2';
 
-    //TODO: Adapt the method to accept String[] queries.
-    public static String translateText(String query, String source, String target){
+
+    public static String[] translateTexts(String[] queries, String source, String target){
         // Build the JSON we will send to the API.
-        String body = buildTranslateJsonBody(query, source, target, 'text');
+        String body = buildTranslateJsonBody(queries, null, target, 'text');
 
         // Get the API response JSON.
         String responseBody = translationAPICallout(body, TRANSLATION_ENDPOINT).getBody();
 
         // Parse the response to get the required information.
         TranslationModel model = (TranslationModel) JSON.deserialize(responseBody, TranslationModel.class);
-        return model.data.translations[0].translatedText;
+
+        // Get the translated texts from the model.
+        String[] translations = new String[]{};
+        for(Translation translation : model.data.translations){
+            translations.add(translation.translatedText);
+        }
+        return translations;
     }
 
-    //TODO: Adapt the method to accept String[] queries.
+    public static String[] translateTexts(String[] queries, String target){
+        return translateTexts(queries, null, target);
+    }
+
+    public static String translateText(String query, String source, String target){
+        return translateTexts(new String[]{query}, source, target)[0];
+    }
+
+    public static String translateText(String query, String target){
+        return translateText(query, null, target);
+    }
+
     public static String detectLanguate(String query){
         String body = buildDetectionJsonBody(query);
 
@@ -35,13 +52,14 @@ public with sharing class GTranslationAPI {
         return model.data.detections.get(0).get(0).language; //TODO: Take into account the confidence?
     }
 
-    private static String buildTranslateJsonBody(String query, String source, String target, String format){
+    private static String buildTranslateJsonBody(String[] queries, String source, String target, String format){
         JSONGenerator gen = JSON.createGenerator(true);
 
         gen.writeStartObject();
-        gen.writeStringField('q', query);
-        gen.writeStringField('source', source);
-        gen.writeStringField('target', target);
+
+        for(String query : queries) gen.writeStringField('q', query);
+        if(source != null) gen.writeStringField('source', source);
+        if(target != null) gen.writeStringField('target', target);
         gen.writeStringField('format', format);
         gen.writeEndObject();
 
@@ -81,6 +99,7 @@ public with sharing class GTranslationAPI {
 
     private class Translation {
         public String translatedText;
+        public String detectedSourceLanguage;
     }
 
     private class DetectionModel {
