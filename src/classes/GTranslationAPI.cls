@@ -13,22 +13,36 @@ public with sharing class GTranslationAPI {
     private static final String TRANSLATION_ENDPOINT = 'https://translation.googleapis.com/language/translate/v2';
 
 
+    public static String getTranslationEndpoint(){
+        return TRANSLATION_ENDPOINT;
+    }
+
+    public static String getDetectionEndpoint(){
+        return DETECTION_ENDPOINT;
+    }
+
     public static String[] translateTexts(String[] queries, String source, String target){
-        // Build the JSON we will send to the API.
-        String body = buildTranslateJsonBody(queries, null, target, 'text');
+        try{
+            // Build the JSON we will send to the API.
+            String body = buildTranslateJsonBody(queries, null, target, 'text');
 
-        // Get the API response JSON.
-        String responseBody = translationAPICallout(body, TRANSLATION_ENDPOINT).getBody();
+            // Get the API response JSON.
+            String responseBody = translationAPICallout(body, TRANSLATION_ENDPOINT).getBody();
 
-        // Parse the response to get the required information.
-        TranslationModel model = (TranslationModel) JSON.deserialize(responseBody, TranslationModel.class);
+            // Parse the response to get the required information.
+            TranslationModel model = (TranslationModel) JSON.deserialize(responseBody, TranslationModel.class);
 
-        // Get the translated texts from the model.
-        String[] translations = new String[]{};
-        for(Translation translation : model.data.translations){
-            translations.add(translation.translatedText);
+            // Get the translated texts from the model.
+            String[] translations = new String[]{};
+            for(Translation translation : model.data.translations){
+                translations.add(translation.translatedText);
+            }
+            return translations;
         }
-        return translations;
+        catch (Exception e){
+            return null;
+        }
+
     }
 
     public static String[] translateTexts(String[] queries, String target){
@@ -36,7 +50,11 @@ public with sharing class GTranslationAPI {
     }
 
     public static String translateText(String query, String source, String target){
-        return translateTexts(new String[]{query}, source, target)[0];
+        String[] translations = translateTexts(new String[]{query}, source, target);
+
+         return translations != null && !translations.isEmpty()
+                 ? translations[0]
+                 : null;
     }
 
     public static String translateText(String query, String target){
@@ -56,7 +74,6 @@ public with sharing class GTranslationAPI {
         JSONGenerator gen = JSON.createGenerator(true);
 
         gen.writeStartObject();
-
         for(String query : queries) gen.writeStringField('q', query);
         if(source != null) gen.writeStringField('source', source);
         if(target != null) gen.writeStringField('target', target);
