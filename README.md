@@ -1,4 +1,4 @@
-# Salesforce integration with Google Translation API for Services cases
+# Salesforce integration with Google Translation API
 
 ### Introduction
 
