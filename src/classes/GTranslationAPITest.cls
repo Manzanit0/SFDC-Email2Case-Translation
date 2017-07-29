@@ -4,8 +4,8 @@
  *
  * @description test class for GTranslationAPI.
  */
-
-@IsTest
+ 
+@IsTest(IsParallel = true)
 private class GTranslationAPITest {
 
     @IsTest
@@ -33,7 +33,7 @@ private class GTranslationAPITest {
     }
 
     @IsTest
-    private static void testInvalidCallout() {
+    private static void testInvalidTranslationCallout() {
         Test.setMock(HttpCalloutMock.class, new GoogleTranslationMock(true));
 
         String translation;
@@ -44,5 +44,28 @@ private class GTranslationAPITest {
         System.assertEquals(null, translation);
     }
 
-    //TODO: GoogleDetectionTests
+    @IsTest
+    private static void testDetection(){
+        Test.setMock(HttpCalloutMock.class, new GoogleDetectionMock());
+
+        String[] detections;
+        Test.startTest();
+            detections = GTranslationAPI.detectLanguages(new String[]{'test 1', 'test 2'});
+        Test.stopTest();
+
+        System.assertNotEquals(null, detections);
+        System.assertEquals(2, detections.size());
+    }
+
+    @IsTest
+    private static void testInvalidDetectionCallout(){
+        Test.setMock(HttpCalloutMock.class, new GoogleDetectionMock());
+
+        String[] detections;
+        Test.startTest();
+            detections = GTranslationAPI.detectLanguages(null);
+        Test.stopTest();
+
+        System.assertEquals(null, detections);
+    }
 }

@@ -7,12 +7,13 @@
 
 public with sharing class GTranslationAPI {
 
+    /** API CONSTANTS **/
     //TODO: Move to Custom Metadata both endpoints and API key.
     private static final String API_KEY = 'Here you must enter your own API key';
     private static final String DETECTION_ENDPOINT = 'https://translation.googleapis.com/language/translate/v2/detect';
     private static final String TRANSLATION_ENDPOINT = 'https://translation.googleapis.com/language/translate/v2';
 
-
+    /** GETTERS **/
     public static String getTranslationEndpoint(){
         return TRANSLATION_ENDPOINT;
     }
@@ -21,6 +22,7 @@ public with sharing class GTranslationAPI {
         return DETECTION_ENDPOINT;
     }
 
+    /** TRANSLATION API METHODS **/
     public static String[] translateTexts(String[] queries, String source, String target){
         try{
             // Build the JSON we will send to the API.
@@ -61,15 +63,6 @@ public with sharing class GTranslationAPI {
         return translateText(query, null, target);
     }
 
-    public static String detectLanguate(String query){
-        String body = buildDetectionJsonBody(query);
-
-        String responseBody = translationAPICallout(body, DETECTION_ENDPOINT).getBody();
-
-        DetectionModel model = (DetectionModel) JSON.deserialize(responseBody, DetectionModel.class);
-        return model.data.detections.get(0).get(0).language; //TODO: Take into account the confidence?
-    }
-
     private static String buildTranslateJsonBody(String[] queries, String source, String target, String format){
         JSONGenerator gen = JSON.createGenerator(true);
 
@@ -83,16 +76,46 @@ public with sharing class GTranslationAPI {
         return gen.getAsString();
     }
 
-    private static String buildDetectionJsonBody(String query){
+    /** DETECTION API METHODS **/
+    public static String[] detectLanguages(String[] queries){
+        try{
+            String body = buildDetectionJsonBody(queries);
+
+            String responseBody = translationAPICallout(body, DETECTION_ENDPOINT).getBody();
+
+            DetectionModel model = (DetectionModel) JSON.deserialize(responseBody, DetectionModel.class);
+
+            String[] detections = new String[]{};
+            for(Detection[] detectionsList : model.data.detections){
+                detections.add(detectionsList.get(0).language);
+            }
+
+            return detections;  //TODO: Take into account the confidence?
+        }
+        catch (Exception e){
+            return null;
+        }
+    }
+
+    public static String detectLanguage(String query){
+        String[] detections = detectLanguages(new String[]{query});
+
+        return detections != null && !detections.isEmpty()
+                ? detections[0]
+                : null;
+    }
+
+    private static String buildDetectionJsonBody(String[] queries){
         JSONGenerator gen = JSON.createGenerator(true);
 
         gen.writeStartObject();
-        gen.writeStringField('q', query);
+        for(String query : queries) gen.writeStringField('q', query);
         gen.writeEndObject();
 
         return gen.getAsString();
     }
 
+    /** CALLOUT HELPER METHOD **/
     private static HttpResponse translationAPICallout(String body, String endpoint){
         // Instantiate a new http object
         Http h = new Http();
